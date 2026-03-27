@@ -12,31 +12,26 @@
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
         .page { display: none; padding: 20px; padding-bottom: 100px; min-height: 100vh; box-sizing: border-box; }
         .active { display: block; }
-        .circle { width: 150px; height: 150px; border: 6px solid var(--blue); border-radius: 50%; margin: 30px auto; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: bold; flex-direction: column; }
+        .circle { width: 160px; height: 160px; border: 6px solid var(--blue); border-radius: 50%; margin: 30px auto; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: bold; flex-direction: column; }
         .circle span { font-size: 14px; color: #8e8e93; font-weight: normal; }
         .box { background: var(--card); padding: 12px 15px; border-radius: 15px; margin-bottom: 10px; }
         label { display: block; font-size: 10px; color: #8e8e93; margin-bottom: 4px; text-transform: uppercase; }
         select, input { width: 100%; padding: 10px; background: #2c2c2e; border: 1px solid #333; color: #fff; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
         .btn { background: var(--blue); border: none; color: #fff; padding: 16px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
-        .month-header { display: flex; justify-content: space-between; padding: 15px 5px; border-bottom: 1px solid #333; color: var(--blue); font-weight: bold; text-transform: capitalize; }
+        .month-header { display: flex; justify-content: space-between; padding: 15px 5px; border-bottom: 1px solid #444; color: var(--blue); font-weight: bold; text-transform: capitalize; margin-top: 15px; }
         .hist-item { background: var(--card); margin-top: 8px; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .hist-date { font-size: 11px; color: #8e8e93; }
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(28, 28, 30, 0.95); backdrop-filter: blur(10px); display: flex; border-top: 0.5px solid #333; padding-bottom: env(safe-area-inset-bottom); }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(28, 28, 30, 0.95); backdrop-filter: blur(10px); display: flex; border-top: 0.5px solid #333; padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
         .tab-item { flex: 1; padding: 15px; text-align: center; font-size: 12px; color: #8e8e93; }
         .tab-item.active-tab { color: var(--blue); font-weight: bold; }
-        .reset-btn { color: var(--red); background: none; border: none; font-size: 12px; margin-top: 30px; width: 100%; }
     </style>
 </head>
 <body>
 
     <div id="homePage" class="page active">
+        <h2 style="text-align:center; font-size: 16px; color: #8e8e93;">Saldo Mese Corrente</h2>
         <div class="circle" id="balanceDisplay">...<span>minuti</span></div>
 
-        <div class="box">
-            <label>Data Turno</label>
-            <input type="date" id="shiftDate">
-        </div>
-
+        <div class="box"><label>Data Turno</label><input type="date" id="shiftDate"></div>
         <div class="box">
             <label>Turno</label>
             <select id="shiftSelect" onchange="updateShiftTimes()">
@@ -46,14 +41,11 @@
                 <option value="P38|15:00-23:00">P38 (15-23)</option>
             </select>
         </div>
-
         <div class="box" style="display: flex; gap: 10px;">
             <div style="flex: 1;"><label>Entrata</label><input type="time" id="entryTime"></div>
             <div style="flex: 1;"><label>Uscita</label><input type="time" id="exitTime"></div>
         </div>
-
-        <button class="btn" onclick="calcolaESalva()">REGISTRA</button>
-        <button class="reset-btn" onclick="resetMensile()">Ripristina 180m</button>
+        <button class="btn" onclick="calcolaESalva()">REGISTRA PERMESSO</button>
     </div>
 
     <div id="historyPage" class="page">
@@ -71,16 +63,15 @@
     const SUPABASE_KEY = 'sb_publishable_zqzcQKMAmtUo0NR1sMytFg_lt6uv9AW';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Imposta data di oggi al caricamento
     document.getElementById('shiftDate').valueAsDate = new Date();
 
-    function showPage(page) {
+    async function showPage(page) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active-tab'));
         if(page === 'home') {
             document.getElementById('homePage').classList.add('active');
             document.getElementById('tabHome').classList.add('active-tab');
-            loadBalance();
+            updateUI();
         } else {
             document.getElementById('historyPage').classList.add('active');
             document.getElementById('tabHist').classList.add('active-tab');
@@ -88,14 +79,32 @@
         }
     }
 
-    async function loadBalance() {
-        const { data } = await _supabase.from('user_data').select('value').eq('label', 'minuti_residui').single();
-        if (data) document.getElementById('balanceDisplay').innerHTML = data.value + "<span>minuti</span>";
+    // FUNZIONE CORE: Calcola i minuti del mese corrente
+    async function updateUI() {
+        const { data, error } = await _supabase.from('history').select('minutes, created_at');
+        if (error) return;
+
+        const ora = new Date();
+        const meseCorrente = ora.getMonth();
+        const annoCorrente = ora.getFullYear();
+
+        // Somma solo i minuti che appartengono a questo mese e anno
+        const minutiUsatiQuestoMese = data.reduce((acc, item) => {
+            const d = new Date(item.created_at);
+            if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
+                return acc + item.minutes;
+            }
+            return acc;
+        }, 0);
+
+        const saldo = 180 - minutiUsatiQuestoMese;
+        document.getElementById('balanceDisplay').innerHTML = saldo + "<span>minuti</span>";
     }
 
     async function loadHistory() {
         const container = document.getElementById('historyContainer');
         const { data } = await _supabase.from('history').select('*').order('created_at', { ascending: false });
+        
         if (!data || data.length === 0) { container.innerHTML = "Vuoto"; return; }
 
         const groups = {};
@@ -109,12 +118,12 @@
 
         let html = "";
         for (const month in groups) {
-            html += `<div class="month-header"><span>${month}</span><span>${groups[month].total}m</span></div>`;
+            html += `<div class="month-header"><span>${month}</span><span>Usati: ${groups[month].total}m</span></div>`;
             groups[month].items.forEach(row => {
                 const d = new Date(row.created_at).toLocaleDateString('it-IT');
                 html += `<div class="hist-item">
-                    <div><b>${row.shift}</b><br><span class="hist-date">${d}</span></div>
-                    <div style="color:var(--red)">-${row.minutes}m</div>
+                    <div><b>${row.shift}</b><br><span style="font-size:11px; color:#8e8e93">${d}</span></div>
+                    <div style="color:var(--red); font-weight:bold">-${row.minutes}m</div>
                 </div>`;
             });
         }
@@ -130,38 +139,30 @@
     }
 
     async function calcolaESalva() {
-        const sel = document.getElementById('shiftSelect');
-        const customDate = document.getElementById('shiftDate').value; // DATA SCELTA
-        if (!sel.value || !customDate) return alert("Inserisci tutti i dati!");
+        const customDate = document.getElementById('shiftDate').value;
+        const shiftVal = document.getElementById('shiftSelect').value;
+        if (!shiftVal || !customDate) return alert("Dati mancanti!");
 
-        const shiftName = sel.value.split('|')[0];
-        const [tInizio, tFine] = sel.value.split('|')[1].split('-');
-        const eEff = document.getElementById('entryTime').value;
-        const uEff = document.getElementById('exitTime').value;
+        const shiftName = shiftVal.split('|')[0];
+        const [tI, tF] = shiftVal.split('|')[1].split('-');
+        const eE = document.getElementById('entryTime').value;
+        const uE = document.getElementById('exitTime').value;
 
         let diff = 0;
-        if (eEff > tInizio) diff += calcolaDiff(tInizio, eEff);
-        if (uEff < tFine) diff += calcolaDiff(uEff, tFine);
+        if (eE > tI) diff += calcolaDiff(tI, eE);
+        if (uE < tF) diff += calcolaDiff(uE, tF);
 
         if (diff > 0) {
-            if(confirm(`Scalare ${diff} minuti per il giorno ${customDate}?`)) {
-                // Sottrai dal saldo
-                const { data: current } = await _supabase.from('user_data').select('value').eq('label', 'minuti_residui').single();
-                let newBalance = current.value - diff;
-                await _supabase.from('user_data').update({ value: newBalance }).eq('label', 'minuti_residui');
-                
-                // Inserisci nello storico con la data scelta
-                // Usiamo created_at sovrascrivendolo con la data del calendario
+            if(confirm(`Registrare ${diff} min per il ${customDate}?`)) {
                 await _supabase.from('history').insert([{ 
                     shift: shiftName, 
                     minutes: diff, 
                     created_at: new Date(customDate).toISOString() 
                 }]);
-                
-                loadBalance();
-                alert("Registrato!");
+                updateUI();
+                alert("Fatto!");
             }
-        } else alert("Nessun permesso rilevato.");
+        } else alert("Nessun minuto da scalare.");
     }
 
     function calcolaDiff(s, e) {
@@ -169,14 +170,7 @@
         return Math.floor((new Date(0,0,0,end[0],end[1]) - new Date(0,0,0,start[0],start[1]))/60000);
     }
 
-    async function resetMensile() {
-        if(confirm("Resetti a 180m?")) {
-            await _supabase.from('user_data').update({ value: 180 }).eq('label', 'minuti_residui');
-            loadBalance();
-        }
-    }
-
-    loadBalance();
+    updateUI();
 </script>
 </body>
 </html>
