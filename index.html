@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Work Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg: #000; --card: #1c1c1e; --blue: #0a84ff; --text: #fff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 400px; margin: 0 auto; text-align: center; }
+        .circle { width: 150px; height: 150px; border: 6px solid var(--blue); border-radius: 50%; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; }
+        .box { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: left; }
+        label { display: block; font-size: 11px; color: #8e8e93; margin-bottom: 5px; text-transform: uppercase; }
+        select, input { width: 100%; padding: 12px; background: #2c2c2e; border: 1px solid #333; color: #fff; border-radius: 10px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .btn { background: var(--blue); border: none; color: #fff; padding: 18px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="circle" id="balanceDisplay">...</div>
+    <div id="status" style="font-size: 10px; color: #444;">Caricamento...</div>
+
+    <div class="box">
+        <label>Turno</label>
+        <select id="shiftSelect" onchange="updateShiftTimes()">
+            <option value="">-- Seleziona --</option>
+            <option value="07:00-15:00">M78 (07-15)</option>
+            <option value="08:00-16:00">M88 (08-16)</option>
+            <option value="15:00-23:00">P38 (15-23)</option>
+        </select>
+    </div>
+
+    <div class="box" style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+            <label>Entrata</label>
+            <input type="time" id="entryTime">
+        </div>
+        <div style="flex: 1;">
+            <label>Uscita</label>
+            <input type="time" id="exitTime">
+        </div>
+    </div>
+
+    <button class="btn" onclick="calcolaESalva()">REGISTRA PERMESSO</button>
+</div>
+
+<script>
+    // INCOLLA QUI I TUOI DATI DI SUPABASE
+    const SUPABASE_URL = 'INCOLLA_QUI_URL'; 
+    const SUPABASE_KEY = 'INCOLLA_QUI_PUBLISHABLE_KEY';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentBalance = 0;
+
+    async function loadFromCloud() {
+        const { data, error } = await _supabase.from('user_data').select('value').eq('label', 'minuti_residui').single();
+        if (data) {
+            currentBalance = data.value;
+            document.getElementById('balanceDisplay').innerText = currentBalance + "m";
+            document.getElementById('status').innerText = "Sincronizzato";
+        }
+    }
+
+    function updateShiftTimes() {
+        const val = document.getElementById('shiftSelect').value;
+        if (!val) return;
+        const [inizio, fine] = val.split('-');
+        document.getElementById('entryTime').value = inizio;
+        document.getElementById('exitTime').value = fine;
+    }
+
+    async function calcolaESalva() {
+        const shiftVal = document.getElementById('shiftSelect').value;
+        if (!shiftVal) return alert("Seleziona un turno!");
+
+        const [tInizio, tFine] = shiftVal.split('-');
+        const eEff = document.getElementById('entryTime').value;
+        const uEff = document.getElementById('exitTime').value;
+
+        let minutiUsati = 0;
+        if (eEff > tInizio) minutiUsati += calcolaDiff(tInizio, eEff);
+        if (uEff < tFine) minutiUsati += calcolaDiff(uEff, tFine);
+
+        if (minutiUsati > 0) {
+            currentBalance -= minutiUsati;
+            document.getElementById('balanceDisplay').innerText = currentBalance + "m";
+            await _supabase.from('user_data').update({ value: currentBalance }).eq('label', 'minuti_residui');
+            alert(`Sottratti ${minutiUsati} minuti.`);
+        } else {
+            alert("Orario regolare, nessun permesso usato.");
+        }
+    }
+
+    function calcolaDiff(start, end) {
+        const s = start.split(':'), e = end.split(':');
+        return Math.floor(((new Date(0,0,0,e[0],e[1]) - new Date(0,0,0,s[0],s[1]))) / 60000);
+    }
+
+    loadFromCloud();
+</script>
+</body>
+</html>
