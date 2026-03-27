@@ -3,134 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Permessi</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Permessi Lavoro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #000; --card: #1c1c1e; --blue: #0a84ff; --text: #fff; --red: #ff453a; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        :root { --bg: #000; --card: #1c1c1e; --blue: #0a84ff; --text: #fff; --red: #ff453a; --gray: #8e8e93; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; user-select: none; }
+        
+        /* Pagine */
         .page { display: none; padding: 20px; padding-bottom: 100px; min-height: 100vh; box-sizing: border-box; }
-        .active { display: block; }
-        .circle { width: 160px; height: 160px; border: 6px solid var(--blue); border-radius: 50%; margin: 30px auto; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: bold; flex-direction: column; }
-        .circle span { font-size: 14px; color: #8e8e93; font-weight: normal; }
-        .box { background: var(--card); padding: 12px 15px; border-radius: 15px; margin-bottom: 10px; }
-        label { display: block; font-size: 10px; color: #8e8e93; margin-bottom: 4px; text-transform: uppercase; }
-        select, input { width: 100%; padding: 10px; background: #2c2c2e; border: 1px solid #333; color: #fff; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
-        .btn { background: var(--blue); border: none; color: #fff; padding: 16px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
-        .month-header { display: flex; justify-content: space-between; padding: 15px 5px; border-bottom: 1px solid #444; color: var(--blue); font-weight: bold; text-transform: capitalize; margin-top: 15px; }
-        .hist-item { background: var(--card); margin-top: 8px; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(28, 28, 30, 0.95); backdrop-filter: blur(10px); display: flex; border-top: 0.5px solid #333; padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
-        .tab-item { flex: 1; padding: 15px; text-align: center; font-size: 12px; color: #8e8e93; }
-        .tab-item.active-tab { color: var(--blue); font-weight: bold; }
+        .active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Dashboard Home */
+        .header-label { text-align: center; color: var(--gray); font-size: 13px; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .circle { width: 180px; height: 180px; border: 5px solid var(--blue); border-radius: 50%; margin: 20px auto 40px; display: flex; align-items: center; justify-content: center; font-size: 42px; font-weight: bold; flex-direction: column; box-shadow: 0 0 20px rgba(10, 132, 255, 0.2); }
+        .circle span { font-size: 14px; color: var(--gray); font-weight: normal; margin-top: 5px; }
+
+        /* Input e Box */
+        .box { background: var(--card); padding: 15px; border-radius: 16px; margin-bottom: 12px; }
+        label { display: block; font-size: 11px; color: var(--gray); margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
+        select, input { width: 100%; padding: 12px; background: #2c2c2e; border: none; color: #fff; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
+        .btn { background: var(--blue); border: none; color: #fff; padding: 18px; border-radius: 16px; font-weight: bold; width: 100%; font-size: 17px; margin-top: 10px; cursor: pointer; }
+        .btn:active { opacity: 0.8; transform: scale(0.98); }
+
+        /* Storico */
+        .month-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 5px 10px; border-bottom: 1px solid #333; color: var(--blue); font-weight: bold; text-transform: capitalize; }
+        .hist-item { background: var(--card); margin-top: 10px; padding: 15px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .hist-info b { font-size: 16px; }
+        .hist-date { font-size: 12px; color: var(--gray); margin-top: 4px; }
+        .hist-min { color: var(--red); font-weight: 700; font-size: 16px; }
+
+        /* Navigation Bar */
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: rgba(28, 28, 30, 0.9); backdrop-filter: blur(15px); display: flex; border-top: 0.5px solid #333; padding-bottom: env(safe-area-inset-bottom); z-index: 1000; }
+        .tab-item { flex: 1; padding: 15px; text-align: center; font-size: 11px; color: var(--gray); cursor: pointer; transition: 0.2s; }
+        .tab-item.active-tab { color: var(--blue); }
+        .tab-icon { font-size: 20px; display: block; margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
     <div id="homePage" class="page active">
-        <h2 style="text-align:center; font-size: 16px; color: #8e8e93;">Saldo Mese Corrente</h2>
+        <div class="header-label">Residuo Mese Corrente</div>
         <div class="circle" id="balanceDisplay">...<span>minuti</span></div>
 
-        <div class="box"><label>Data Turno</label><input type="date" id="shiftDate"></div>
         <div class="box">
-            <label>Turno</label>
-            <select id="shiftSelect" onchange="updateShiftTimes()">
-                <option value="">-- Seleziona --</option>
-                <option value="M78|07:00-15:00">M78 (07-15)</option>
-                <option value="M88|08:00-16:00">M88 (08-16)</option>
-                <option value="P38|15:00-23:00">P38 (15-23)</option>
+            <label>Data Turno</label>
+            <input type="date" id="shiftDate">
+        </div>
+
+        <div class="box">
+            <label>Seleziona Turno</label>
+            <select id="shiftSelect" onchange="applyShiftPreset()">
+                <option value="">-- Scegli Turno --</option>
+                <option value="M78|07:00-15:00">M78 (07:00 - 15:00)</option>
+                <option value="M88|08:00-16:00">M88 (08:00 - 16:00)</option>
+                <option value="P38|15:00-23:00">P38 (15:00 - 23:00)</option>
             </select>
         </div>
-        <div class="box" style="display: flex; gap: 10px;">
-            <div style="flex: 1;"><label>Entrata</label><input type="time" id="entryTime"></div>
-            <div style="flex: 1;"><label>Uscita</label><input type="time" id="exitTime"></div>
+
+        <div class="box" style="display: flex; gap: 15px;">
+            <div style="flex: 1;"><label>Entrata Reale</label><input type="time" id="entryTime"></div>
+            <div style="flex: 1;"><label>Uscita Reale</label><input type="time" id="exitTime"></div>
         </div>
-        <button class="btn" onclick="calcolaESalva()">REGISTRA PERMESSO</button>
+
+        <button class="btn" onclick="processRecord()">REGISTRA ORE</button>
     </div>
 
     <div id="historyPage" class="page">
-        <h2>Storico</h2>
-        <div id="historyContainer">Caricamento...</div>
+        <h2 style="margin-left: 5px;">Storico</h2>
+        <div id="historyContainer">Caricamento in corso...</div>
     </div>
 
     <div class="tab-bar">
-        <div class="tab-item active-tab" id="tabHome" onclick="showPage('home')">🏠 Home</div>
-        <div class="tab-item" id="tabHist" onclick="showPage('history')">📜 Storico</div>
+        <div class="tab-item active-tab" id="tabHome" onclick="switchPage('home')">
+            <span class="tab-icon">🕒</span>Home
+        </div>
+        <div class="tab-item" id="tabHist" onclick="switchPage('history')">
+            <span class="tab-icon">📜</span>Storico
+        </div>
     </div>
 
 <script>
+    // --- CONFIGURAZIONE ---
     const SUPABASE_URL = 'https://dzxernjfrulapqofwqdd.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_zqzcQKMAmtUo0NR1sMytFg_lt6uv9AW';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Imposta data odierna
     document.getElementById('shiftDate').valueAsDate = new Date();
 
-    async function showPage(page) {
+    // Navigazione tra sezioni
+    async function switchPage(target) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active-tab'));
-        if(page === 'home') {
+        
+        if(target === 'home') {
             document.getElementById('homePage').classList.add('active');
             document.getElementById('tabHome').classList.add('active-tab');
-            updateUI();
+            refreshBalance();
         } else {
             document.getElementById('historyPage').classList.add('active');
             document.getElementById('tabHist').classList.add('active-tab');
-            loadHistory();
+            renderHistory();
         }
     }
 
-    // FUNZIONE CORE: Calcola i minuti del mese corrente
-    async function updateUI() {
+    // Calcolo saldo basato sui dati presenti nel DB per il mese attuale
+    async function refreshBalance() {
         const { data, error } = await _supabase.from('history').select('minutes, created_at');
         if (error) return;
 
         const ora = new Date();
-        const meseCorrente = ora.getMonth();
-        const annoCorrente = ora.getFullYear();
+        const m = ora.getMonth();
+        const y = ora.getFullYear();
 
-        // Somma solo i minuti che appartengono a questo mese e anno
-        const minutiUsatiQuestoMese = data.reduce((acc, item) => {
+        const usati = data.reduce((acc, item) => {
             const d = new Date(item.created_at);
-            if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
-                return acc + item.minutes;
-            }
-            return acc;
+            return (d.getMonth() === m && d.getFullYear() === y) ? acc + item.minutes : acc;
         }, 0);
 
-        const saldo = 180 - minutiUsatiQuestoMese;
-        document.getElementById('balanceDisplay').innerHTML = saldo + "<span>minuti</span>";
+        document.getElementById('balanceDisplay').innerHTML = (180 - usati) + "<span>minuti</span>";
     }
 
-    async function loadHistory() {
-        const container = document.getElementById('historyContainer');
-        const { data } = await _supabase.from('history').select('*').order('created_at', { ascending: false });
-        
-        if (!data || data.length === 0) { container.innerHTML = "Vuoto"; return; }
-
-        const groups = {};
-        data.forEach(item => {
-            const date = new Date(item.created_at);
-            const key = date.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
-            if (!groups[key]) groups[key] = { items: [], total: 0 };
-            groups[key].items.push(item);
-            groups[key].total += item.minutes;
-        });
-
-        let html = "";
-        for (const month in groups) {
-            html += `<div class="month-header"><span>${month}</span><span>Usati: ${groups[month].total}m</span></div>`;
-            groups[month].items.forEach(row => {
-                const d = new Date(row.created_at).toLocaleDateString('it-IT');
-                html += `<div class="hist-item">
-                    <div><b>${row.shift}</b><br><span style="font-size:11px; color:#8e8e93">${d}</span></div>
-                    <div style="color:var(--red); font-weight:bold">-${row.minutes}m</div>
-                </div>`;
-            });
-        }
-        container.innerHTML = html;
-    }
-
-    function updateShiftTimes() {
+    // Applica orari predefiniti in base al turno scelto
+    function applyShiftPreset() {
         const val = document.getElementById('shiftSelect').value;
         if (!val) return;
         const [inizio, fine] = val.split('|')[1].split('-');
@@ -138,39 +134,93 @@
         document.getElementById('exitTime').value = fine;
     }
 
-    async function calcolaESalva() {
-        const customDate = document.getElementById('shiftDate').value;
+    // Logica di registrazione
+    async function processRecord() {
         const shiftVal = document.getElementById('shiftSelect').value;
-        if (!shiftVal || !customDate) return alert("Dati mancanti!");
+        const dateVal = document.getElementById('shiftDate').value;
+        
+        if (!shiftVal || !dateVal) return alert("Inserisci turno e data!");
 
         const shiftName = shiftVal.split('|')[0];
-        const [tI, tF] = shiftVal.split('|')[1].split('-');
-        const eE = document.getElementById('entryTime').value;
-        const uE = document.getElementById('exitTime').value;
+        const [tInizio, tFine] = shiftVal.split('|')[1].split('-');
+        const eReale = document.getElementById('entryTime').value;
+        const uReale = document.getElementById('exitTime').value;
 
-        let diff = 0;
-        if (eE > tI) diff += calcolaDiff(tI, eE);
-        if (uE < tF) diff += calcolaDiff(uE, tF);
+        // Calcolo differenze
+        let minPersi = 0;
+        let dettagli = "";
 
-        if (diff > 0) {
-            if(confirm(`Registrare ${diff} min per il ${customDate}?`)) {
+        if (eReale > tInizio) {
+            const dE = diffInMinutes(tInizio, eReale);
+            minPersi += dE;
+            dettagli += `- Entrata posticipata: ${dE}m\n`;
+        }
+        if (uReale < tFine) {
+            const dU = diffInMinutes(uReale, tFine);
+            minPersi += dU;
+            dettagli += `- Uscita anticipata: ${dU}m\n`;
+        }
+
+        if (minPersi > 0) {
+            if(confirm(`${dettagli}\nTotale: ${minPersi}m\nConfermi la registrazione?`)) {
                 await _supabase.from('history').insert([{ 
                     shift: shiftName, 
-                    minutes: diff, 
-                    created_at: new Date(customDate).toISOString() 
+                    minutes: minPersi, 
+                    created_at: new Date(dateVal).toISOString() 
                 }]);
-                updateUI();
-                alert("Fatto!");
+                refreshBalance();
+                alert("Registrato correttamente!");
             }
-        } else alert("Nessun minuto da scalare.");
+        } else {
+            alert("Nessuna anomalia oraria rilevata.");
+        }
     }
 
-    function calcolaDiff(s, e) {
-        const start = s.split(':'), end = e.split(':');
-        return Math.floor((new Date(0,0,0,end[0],end[1]) - new Date(0,0,0,start[0],start[1]))/60000);
+    // Calcola differenza minuti tra due stringhe HH:mm
+    function diffInMinutes(start, end) {
+        const s = start.split(':'), e = end.split(':');
+        return Math.floor((new Date(0,0,0,e[0],e[1]) - new Date(0,0,0,s[0],s[1]))/60000);
     }
 
-    updateUI();
+    // Mostra lo storico raggruppato
+    async function renderHistory() {
+        const cont = document.getElementById('historyContainer');
+        const { data } = await _supabase.from('history').select('*').order('created_at', { ascending: false });
+        
+        if (!data || data.length === 0) {
+            cont.innerHTML = "<p style='text-align:center; color:#666; margin-top:50px;'>Nessun dato presente.</p>";
+            return;
+        }
+
+        const groups = {};
+        data.forEach(item => {
+            const d = new Date(item.created_at);
+            const key = d.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
+            if (!groups[key]) groups[key] = { items: [], total: 0 };
+            groups[key].items.push(item);
+            groups[key].total += item.minutes;
+        });
+
+        let html = "";
+        for (const month in groups) {
+            html += `<div class="month-header"><span>${month}</span><span>Tot: ${groups[month].total}m</span></div>`;
+            groups[month].items.forEach(row => {
+                const dataFmt = new Date(row.created_at).toLocaleDateString('it-IT');
+                html += `
+                <div class="hist-item">
+                    <div class="hist-info">
+                        <b>${row.shift}</b>
+                        <div class="hist-date">${dataFmt}</div>
+                    </div>
+                    <div class="hist-min">-${row.minutes}m</div>
+                </div>`;
+            });
+        }
+        cont.innerHTML = html;
+    }
+
+    // Avvio iniziale
+    refreshBalance();
 </script>
 </body>
 </html>
