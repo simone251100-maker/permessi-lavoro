@@ -3,79 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Work Tracker</title>
+    <title>Permessi Lavoro</title>
+    
+    <meta name="apple-mobile-web-app-title" content="Permessi">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #000; --card: #1c1c1e; --blue: #0a84ff; --text: #fff; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 400px; margin: 0 auto; text-align: center; }
-        .circle { width: 150px; height: 150px; border: 6px solid var(--blue); border-radius: 50%; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; }
-        .box { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: left; }
+        :root { --bg: #000; --card: #1c1c1e; --blue: #0a84ff; --red: #ff453a; --text: #fff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 20px 40px 20px; }
+        
+        .circle { width: 140px; height: 140px; border: 6px solid var(--blue); border-radius: 50%; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; flex-direction: column; }
+        .circle span { font-size: 12px; color: #8e8e93; font-weight: normal; }
+
+        .box { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 12px; }
         label { display: block; font-size: 11px; color: #8e8e93; margin-bottom: 5px; text-transform: uppercase; }
         select, input { width: 100%; padding: 12px; background: #2c2c2e; border: 1px solid #333; color: #fff; border-radius: 10px; font-size: 16px; outline: none; box-sizing: border-box; }
-        .btn { background: var(--blue); border: none; color: #fff; padding: 18px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
+
+        .btn { background: var(--blue); border: none; color: #fff; padding: 18px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 5px; }
+        
+        /* Stile Storico */
+        .history-title { text-align: left; margin-top: 30px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .history-list { margin-top: 10px; text-align: left; }
+        .history-item { background: #111; padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid var(--blue); display: flex; justify-content: space-between; font-size: 14px; }
+        .history-date { color: #8e8e93; font-size: 11px; }
+
+        .reset-btn { color: var(--red); background: none; border: none; font-size: 12px; text-decoration: underline; padding: 10px; margin-top: 20px; width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="circle" id="balanceDisplay">...</div>
-    <div id="status" style="font-size: 10px; color: #444;">Caricamento...</div>
+    <div class="circle" id="balanceDisplay">...<span>minuti</span></div>
 
     <div class="box">
         <label>Turno</label>
         <select id="shiftSelect" onchange="updateShiftTimes()">
             <option value="">-- Seleziona --</option>
-            <option value="07:00-15:00">M78 (07-15)</option>
-            <option value="08:00-16:00">M88 (08-16)</option>
-            <option value="15:00-23:00">P38 (15-23)</option>
+            <option value="M78|07:00-15:00">M78 (07-15)</option>
+            <option value="M88|08:00-16:00">M88 (08-16)</option>
+            <option value="P38|15:00-23:00">P38 (15-23)</option>
         </select>
     </div>
 
     <div class="box" style="display: flex; gap: 10px;">
-        <div style="flex: 1;">
-            <label>Entrata</label>
-            <input type="time" id="entryTime">
-        </div>
-        <div style="flex: 1;">
-            <label>Uscita</label>
-            <input type="time" id="exitTime">
-        </div>
+        <div style="flex: 1;"><label>Entrata</label><input type="time" id="entryTime"></div>
+        <div style="flex: 1;"><label>Uscita</label><input type="time" id="exitTime"></div>
     </div>
 
     <button class="btn" onclick="calcolaESalva()">REGISTRA PERMESSO</button>
-</div>
+
+    <div class="history-title">Storico <small id="status" style="font-size: 10px; color: #444;">...</small></div>
+    <div id="historyList" class="history-list"></div>
+
+    <button class="reset-btn" onclick="resetMensile()">Nuovo Mese (Ripristina 180m)</button>
 
 <script>
-    // INCOLLA QUI I TUOI DATI DI SUPABASE
-    const SUPABASE_URL = 'https://dzxernjfrulapqofwqdd.supabase.co'; 
-    const SUPABASE_KEY = 'sb_publishable_zqzcQKMAmtUo0NR1sMytFg_lt6uv9AW';
+    const SUPABASE_URL = 'IL_TUO_URL'; 
+    const SUPABASE_KEY = 'LA_TUA_KEY';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentBalance = 0;
 
-    async function loadFromCloud() {
-        const { data, error } = await _supabase.from('user_data').select('value').eq('label', 'minuti_residui').single();
+    async function init() {
+        await loadBalance();
+        await loadHistory();
+    }
+
+    async function loadBalance() {
+        const { data } = await _supabase.from('user_data').select('value').eq('label', 'minuti_residui').single();
         if (data) {
             currentBalance = data.value;
-            document.getElementById('balanceDisplay').innerText = currentBalance + "m";
+            document.getElementById('balanceDisplay').innerHTML = currentBalance + "<span>minuti</span>";
             document.getElementById('status').innerText = "Sincronizzato";
+        }
+    }
+
+    async function loadHistory() {
+        const { data } = await _supabase.from('history').select('*').order('created_at', { ascending: false }).limit(10);
+        const list = document.getElementById('historyList');
+        list.innerHTML = "";
+        if (data) {
+            data.forEach(item => {
+                const date = new Date(item.created_at).toLocaleDateString('it-IT');
+                list.innerHTML += `<div class="history-item">
+                    <div><b>${item.shift}</b> <br> <span class="history-date">${date}</span></div>
+                    <div style="color: var(--red)">-${item.minutes}m</div>
+                </div>`;
+            });
         }
     }
 
     function updateShiftTimes() {
         const val = document.getElementById('shiftSelect').value;
         if (!val) return;
-        const [inizio, fine] = val.split('-');
+        const [nome, orari] = val.split('|');
+        const [inizio, fine] = orari.split('-');
         document.getElementById('entryTime').value = inizio;
         document.getElementById('exitTime').value = fine;
     }
 
     async function calcolaESalva() {
-        const shiftVal = document.getElementById('shiftSelect').value;
-        if (!shiftVal) return alert("Seleziona un turno!");
+        const shiftSelect = document.getElementById('shiftSelect');
+        if (!shiftSelect.value) return alert("Seleziona un turno!");
 
-        const [tInizio, tFine] = shiftVal.split('-');
+        const shiftName = shiftSelect.value.split('|')[0];
+        const [tInizio, tFine] = shiftSelect.value.split('|')[1].split('-');
         const eEff = document.getElementById('entryTime').value;
         const uEff = document.getElementById('exitTime').value;
 
@@ -84,12 +117,18 @@
         if (uEff < tFine) minutiUsati += calcolaDiff(uEff, tFine);
 
         if (minutiUsati > 0) {
-            currentBalance -= minutiUsati;
-            document.getElementById('balanceDisplay').innerText = currentBalance + "m";
-            await _supabase.from('user_data').update({ value: currentBalance }).eq('label', 'minuti_residui');
-            alert(`Sottratti ${minutiUsati} minuti.`);
+            if(confirm(`Confermi l'utilizzo di ${minutiUsati} minuti?`)) {
+                currentBalance -= minutiUsati;
+                // Update Saldo
+                await _supabase.from('user_data').update({ value: currentBalance }).eq('label', 'minuti_residui');
+                // Aggiungi allo storico
+                await _supabase.from('history').insert([{ shift: shiftName, minutes: minutiUsati }]);
+                
+                init(); // Ricarica tutto
+                alert("Registrato con successo!");
+            }
         } else {
-            alert("Orario regolare, nessun permesso usato.");
+            alert("Nessun permesso rilevato.");
         }
     }
 
@@ -98,7 +137,15 @@
         return Math.floor(((new Date(0,0,0,e[0],e[1]) - new Date(0,0,0,s[0],s[1]))) / 60000);
     }
 
-    loadFromCloud();
+    async function resetMensile() {
+        if(confirm("Sei sicuro? Questo riporterà il saldo a 180 minuti per il nuovo mese.")) {
+            await _supabase.from('user_data').update({ value: 180 }).eq('label', 'minuti_residui');
+            // Opzionale: svuota lo storico? Meglio di no, lasciamolo per controllo.
+            init();
+        }
+    }
+
+    init();
 </script>
 </body>
 </html>
